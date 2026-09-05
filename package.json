@@ -1,0 +1,32 @@
+{
+  "name": "paper-easy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "check": "tsc --noEmit --skipLibCheck",
+    "test": "node test/build.mjs && node test/run.mjs",
+    "test:ui": "node test/pdf-fixture.mjs && node test/browser.mjs",
+    "package": "npm run build && python scripts/package.py"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "esbuild": "^0.25.5",
+    "obsidian": "latest",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "author": "Nanoarcheaum",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nanoarcheaum/obsidian-paper-easy.git"
+  },
+  "homepage": "https://github.com/Nanoarcheaum/obsidian-paper-easy#readme",
+  "bugs": {
+    "url": "https://github.com/Nanoarcheaum/obsidian-paper-easy/issues"
+  }
+}

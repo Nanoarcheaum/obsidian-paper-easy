@@ -1,0 +1,9 @@
+{
+  "id": "ai4discovering-paper-notes",
+  "name": "Paper-easy",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "A lightweight, local-first PDF reading and annotation workflow for Obsidian.",
+  "author": "Nanoarcheaum",
+  "isDesktopOnly": false
+}
