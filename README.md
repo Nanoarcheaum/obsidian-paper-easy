@@ -6,7 +6,6 @@
 
 Paper-easy 是一款轻量的 Obsidian 论文阅读与批注插件。它沿用你的文件夹体系：每篇论文对应一个 PDF 和同名 Markdown 笔记，可以分散在不同学科目录中。无需新建数据库，也不需要切换到独立工作台。
 
-> Obsidian 中的插件显示名称为 **Paper-easy**。为了兼容已有安装，插件 ID 保持 `ai4discovering-paper-notes`。
 
 ## 功能一览
 
