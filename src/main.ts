@@ -38,7 +38,7 @@ import {
 } from "./paper";
 import { AnnotationWrites, KeyedQueue } from "./transactions";
 import { vaultWriteStore } from "./write-store";
-import { translateText } from "./translator";
+import { convertFormulaToMarkdown, translateText } from "./translator";
 import { matchZoteroAttachment } from "./zotero-matching";
 import { ZoteroCreator, ZoteroLocalClient } from "./zotero";
 import {
@@ -681,6 +681,30 @@ export default class PaperNotesPlugin extends Plugin {
     }
   }
 
+  async convertFormulaSelection(pdf?: TFile, captured?: PdfTextSelection): Promise<void> {
+    const selection = captured ?? this.readPdfSelection(pdf);
+    if (!selection) { new Notice("请先在 PDF 页面中划选需要转写的公式"); return; }
+    const request = ++this.translationRequest;
+    this.selectionTrigger?.addClass("is-loading");
+    new Notice("Ollama 正在转写公式…");
+    try {
+      const markdown = await convertFormulaToMarkdown(selection.text, {
+        endpoint: this.settings.translationEndpoint,
+        apiKey: this.settings.translationApiKey,
+        model: this.settings.translationModel,
+        targetLanguage: this.settings.targetLanguage
+      });
+      if (this.disposed || request !== this.translationRequest || !selection.range.startContainer.isConnected) return;
+      this.selectionTrigger?.remove();
+      this.selectionTrigger = null;
+      this.showFormulaCard(selection, markdown);
+    } catch (error) {
+      if (this.disposed || request !== this.translationRequest) return;
+      this.selectionTrigger?.removeClass("is-loading");
+      new Notice(error instanceof Error ? error.message : "公式转写失败");
+    }
+  }
+
   private readPdfSelection(preferredPdf?: TFile): PdfTextSelection | null {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
@@ -791,6 +815,7 @@ export default class PaperNotesPlugin extends Plugin {
       this.startFigureCapture(selection.pdf);
     });
     addAction(referenceRow, "languages", "翻译", () => void this.translateSelection(selection.pdf, selection));
+    addAction(referenceRow, "sigma", "公式转 MD", () => void this.convertFormulaSelection(selection.pdf, selection));
     const width = toolbar.offsetWidth || 480;
     const height = toolbar.offsetHeight || 72;
     const originX = anchor?.x ?? selection.rect.left + selection.rect.width / 2;
@@ -963,6 +988,38 @@ export default class PaperNotesPlugin extends Plugin {
         await this.createNativeMarkup(selection, "Highlight", translation, true);
         this.dismissTranslationUi();
         new Notice("译文已保存为 PDF 高光批注和笔记，重新打开仍可查看");
+      } catch (error) { this.reportError(error); save.disabled = false; }
+    });
+    this.translationCard = card;
+  }
+
+  private showFormulaCard(selection: PdfTextSelection, markdown: string): void {
+    this.translationCard?.remove();
+    const card = document.body.createDiv({ cls: "ai4d-translation-card ai4d-formula-card" });
+    card.style.left = `${Math.max(12, Math.min(window.innerWidth - 392, selection.rect.right + 10))}px`;
+    card.style.top = `${Math.max(58, Math.min(window.innerHeight - 330, selection.rect.top))}px`;
+    const header = card.createDiv({ cls: "ai4d-translation-card-header" });
+    header.createSpan({ text: `第 ${selection.page} 页 · Obsidian Markdown` });
+    const close = header.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "关闭" } });
+    setIcon(close, "x");
+    close.addEventListener("click", () => this.dismissTranslationUi());
+    card.createEl("p", { cls: "ai4d-translation-source", text: selection.text });
+    card.createEl("pre", { cls: "ai4d-formula-markdown", text: markdown });
+    const actions = card.createDiv({ cls: "ai4d-translation-actions" });
+    const copy = actions.createEl("button", { text: "复制 Markdown" });
+    copy.addEventListener("click", async () => { await navigator.clipboard.writeText(markdown); new Notice("公式 Markdown 已复制"); });
+    const save = actions.createEl("button", { cls: "mod-cta", text: "写入伴随笔记" });
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        const note = await this.companionFor(selection.pdf, true);
+        if (!note) return;
+        const id = `ai4d-formula-${crypto.randomUUID()}`;
+        const block = `\n${markdown}\n\n*[[${selection.pdf.path}#page=${selection.page}|↗ 第 ${selection.page} 页]]*\n\n^${id}\n`;
+        await this.appendRecoverable(note, block, id);
+        if (this.settings.openSideBySide) await this.showCompanion(selection.pdf, note);
+        this.dismissTranslationUi();
+        new Notice("公式已写入伴随笔记");
       } catch (error) { this.reportError(error); save.disabled = false; }
     });
     this.translationCard = card;

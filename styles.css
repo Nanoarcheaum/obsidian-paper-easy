@@ -194,6 +194,7 @@ body.ai4d-figure-capture-active * { cursor: crosshair !important; }
 .ai4d-translation-card-header { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 10px; }
 .ai4d-translation-source { max-height: 68px; margin: 8px 0; overflow: auto; color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .ai4d-translation-text { max-height: 150px; margin: 8px 0 12px; overflow: auto; font-family: Georgia, "Noto Serif SC", serif; font-size: 13px; line-height: 1.7; }
+.ai4d-formula-markdown { max-height: 170px; margin: 8px 0 12px; padding: 10px; overflow: auto; border-radius: 6px; background: var(--background-secondary); color: var(--text-normal); font-family: var(--font-monospace); font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .ai4d-translation-actions { display: flex; justify-content: flex-end; gap: 7px; }
 .ai4d-translated-source { background: rgba(255, 190, 65, .28) !important; border-bottom: 1px solid rgba(181, 84, 61, .8); cursor: help; }
 @keyframes ai4d-toolbar-in { from { opacity: 0; transform: translateY(7px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }

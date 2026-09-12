@@ -2,7 +2,7 @@
 
 **在 Obsidian 中阅读论文、批注原文，让证据与思考留在一起。**
 
-作者：**Nanoarcheaum** · 版本：**1.0.0**
+作者：**Nanoarcheaum** · 版本：**1.1.0**
 
 Paper-easy 是一款轻量的 Obsidian 论文阅读与批注插件。它沿用你的文件夹体系：每篇论文对应一个 PDF 和同名 Markdown 笔记，可以分散在不同学科目录中。无需新建数据库，也不需要切换到独立工作台。
 
@@ -18,6 +18,7 @@ Paper-easy 是一款轻量的 Obsidian 论文阅读与批注插件。它沿用�
 | 一步截图 | 框选图表、公式或页面区域，截图直接进入伴随笔记，附上原页回链。 |
 | 可复用的文字摘录 | 简洁引用块包含原文和页码，可从其他 Markdown 笔记嵌入并返回来源。 |
 | 选段翻译 | 支持本地 Ollama 与兼容 Chat Completions 的接口；可将译文保存为 PDF 高光批注。 |
+| 公式转写 | 在 PDF 中选中公式后右键调用 Ollama，生成 Obsidian 可渲染的 Markdown/LaTeX，可复制或写入伴随笔记。 |
 | 批注检索 | 搜索完整原文、译文和评论，按论文折叠分组，同名论文也能分别管理。 |
 | 保存恢复 | PDF 写入前备份，提供未完成同步恢复及满足条件的单步撤销。 |
 | Zotero 可选兼容 | 共享 PDF，将题录同步到 Markdown；无需开启此功能即可阅读与批注。 |
@@ -32,7 +33,7 @@ Paper-easy 是一款轻量的 Obsidian 论文阅读与批注插件。它沿用�
 
 当前提供手动安装包；本项目尚未声明已上架 Obsidian 社区插件目录。
 
-1. 在本仓库 [Releases](https://github.com/Nanoarcheaum/obsidian-paper-easy/releases) 页面下载 `paper-easy-1.0.0.zip`。
+1. 在本仓库 [Releases](https://github.com/Nanoarcheaum/obsidian-paper-easy/releases) 页面下载 `paper-easy-1.1.0.zip`。
 2. 将其中的 `ai4discovering-paper-notes` 文件夹放进你的 Vault：
 
    ```text
@@ -53,7 +54,7 @@ Paper-easy 是一款轻量的 Obsidian 论文阅读与批注插件。它沿用�
 
 1. 点击左侧“批量导入论文”，选择 PDF 和目标学科目录。
 2. 从“Paper 文件”树打开论文。
-3. 划选文字，点击右键，选择高光、文字批注、引用到笔记或翻译。
+3. 划选文字，点击右键，选择高光、文字批注、引用到笔记、翻译或“公式转 MD”。
 4. 需要图表时选择“截图”，拖动框选后自动保存。
 5. 在其他笔记中运行“插入论文块引用”，复用已经保存的内容。
 
@@ -115,7 +116,7 @@ npm run build
 
 ## 文档与反馈
 
-- [1.0.0 发布说明](RELEASE_NOTES.md)
+- [1.1.0 发布说明](RELEASE_NOTES.md)
 - [更新日志](CHANGELOG.md)
 - [GitHub 发布指南](docs/PUBLISHING.md)
 - [第三方依赖声明](THIRD_PARTY_NOTICES.md)

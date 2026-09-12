@@ -1,11 +1,11 @@
-# Paper-easy 1.0.0 验证记录
+# Paper-easy 1.1.0 验证记录
 
 日期：2026-09-05 · 作者：Nanoarcheaum
 
 ## 发布元数据
 
 - 插件显示名称：Paper-easy。
-- manifest、package、lockfile 版本：1.0.0。
+- manifest、package、lockfile 版本：1.1.0。
 - 插件作者与界面署名：Nanoarcheaum。
 - 内部插件 ID 沿用 ai4discovering-paper-notes，已有用户不需要改目录。
 - 已移除旧作者外链。新安装使用新的默认批注作者，已有设置及历史 PDF 作者字段不自动改写。

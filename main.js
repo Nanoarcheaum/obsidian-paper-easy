@@ -4642,6 +4642,9 @@ function vaultWriteStore(app, directory) {
 // src/translator.ts
 var import_obsidian2 = require("obsidian");
 var cache = /* @__PURE__ */ new Map();
+function isOllamaEndpoint(endpoint) {
+  return /(?:localhost|127\.0\.0\.1):11434/i.test(endpoint) || /\/api\/(?:chat|generate)$/i.test(endpoint);
+}
 async function withTimeout(request, milliseconds) {
   let timer;
   try {
@@ -4656,7 +4659,7 @@ async function translateText(text, config) {
   if (!config.endpoint.trim() || !config.model.trim()) throw new Error("\u8BF7\u5148\u5728\u63D2\u4EF6\u8BBE\u7F6E\u4E2D\u586B\u5199\u7FFB\u8BD1\u63A5\u53E3\u548C\u6A21\u578B");
   if (!text.trim()) throw new Error("\u8BF7\u5148\u9009\u62E9\u9700\u8981\u7FFB\u8BD1\u7684\u6587\u5B57");
   if (text.length > 6e3) throw new Error("\u9009\u6BB5\u8F83\u957F\uFF0C\u8BF7\u5206\u6210\u8F83\u77ED\u6BB5\u843D\u7FFB\u8BD1\uFF0C\u4EE5\u514D\u8BD1\u6587\u88AB\u622A\u65AD\u3002");
-  const cacheKey = JSON.stringify([text, config.endpoint, config.model, config.targetLanguage, config.apiKey]);
+  const cacheKey = JSON.stringify(["translate", text, config.endpoint, config.model, config.targetLanguage, config.apiKey]);
   const cached = cache.get(cacheKey);
   if (cached) return cached;
   const messages = [
@@ -4664,7 +4667,7 @@ async function translateText(text, config) {
     { role: "user", content: text }
   ];
   const configured = config.endpoint.trim().replace(/\/+$/, "");
-  const isOllama = /(?:localhost|127\.0\.0\.1):11434/i.test(configured) || /\/api\/(?:chat|generate)$/i.test(configured);
+  const isOllama = isOllamaEndpoint(configured);
   const endpoint = isOllama ? configured.replace(/\/(?:v1\/chat\/completions|api\/(?:chat|generate))$/i, "") + "/api/chat" : configured;
   const response = await withTimeout((0, import_obsidian2.requestUrl)({
     url: endpoint,
@@ -4689,6 +4692,67 @@ async function translateText(text, config) {
   if (cache.size >= 64) cache.delete(cache.keys().next().value);
   cache.set(cacheKey, translated.trim());
   return translated.trim();
+}
+function normalizeFormulaMarkdown(value) {
+  let formula = value.trim();
+  const fence = formula.match(/^```(?:markdown|md|latex|tex)?\s*\r?\n?([\s\S]*?)\r?\n?```$/i);
+  if (fence) formula = fence[1].trim();
+  formula = formula.replace(/^\s*(?:LaTeX|Markdown)\s*[:：]\s*/i, "").trim();
+  const display = formula.match(/^\\\[([\s\S]*)\\\]$/);
+  if (display) formula = `$$
+${display[1].trim()}
+$$`;
+  const inline = formula.match(/^\\\(([\s\S]*)\\\)$/);
+  if (inline) formula = `$${inline[1].trim()}$`;
+  if (!/^\${1,2}[\s\S]*\${1,2}$/.test(formula)) formula = `$$
+${formula}
+$$`;
+  return formula;
+}
+async function convertFormulaToMarkdown(text, config) {
+  if (!config.endpoint.trim() || !config.model.trim()) throw new Error("\u8BF7\u5148\u5728\u63D2\u4EF6\u8BBE\u7F6E\u4E2D\u586B\u5199 Ollama \u63A5\u53E3\u548C\u6A21\u578B");
+  if (!isOllamaEndpoint(config.endpoint.trim())) throw new Error("\u516C\u5F0F\u8F6C\u5199\u4F7F\u7528 Ollama\uFF0C\u8BF7\u5148\u628A\u7FFB\u8BD1\u670D\u52A1\u5207\u6362\u4E3A Ollama \u672C\u5730");
+  if (!text.trim()) throw new Error("\u8BF7\u5148\u9009\u62E9\u9700\u8981\u8F6C\u5199\u7684\u516C\u5F0F");
+  if (text.length > 3e3) throw new Error("\u516C\u5F0F\u9009\u533A\u8FC7\u957F\uFF0C\u8BF7\u7F29\u77ED\u540E\u91CD\u8BD5");
+  const cacheKey = JSON.stringify(["formula", text, config.endpoint, config.model]);
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  const messages = [
+    { role: "system", content: "\u4F60\u662F\u6570\u5B66\u516C\u5F0F OCR \u6821\u5BF9\u5668\u3002\u628A\u7528\u6237\u63D0\u4F9B\u7684 PDF \u6587\u5B57\u5C42\u516C\u5F0F\u8FD8\u539F\u4E3A Obsidian Markdown \u53EF\u6E32\u67D3\u7684 LaTeX\u3002\u884C\u5185\u516C\u5F0F\u7528 $...$\uFF0C\u72EC\u7ACB\u516C\u5F0F\u7528 $$ \u6362\u884C ... \u6362\u884C $$\u3002\u4FEE\u590D\u4E0A\u4E0B\u6807\u3001\u5E0C\u814A\u5B57\u6BCD\u3001\u5206\u5F0F\u3001\u6839\u5F0F\u3001\u77E9\u9635\u548C\u8FD0\u7B97\u7B26\u3002\u4E0D\u5F97\u6C42\u89E3\u3001\u89E3\u91CA\u6216\u7FFB\u8BD1\u542B\u4E49\uFF0C\u4E0D\u5F97\u8F93\u51FA\u4EE3\u7801\u56F4\u680F\uFF0C\u53EA\u8F93\u51FA\u4E00\u4E2A\u5B8C\u6574\u516C\u5F0F\u3002" },
+    { role: "user", content: text }
+  ];
+  const configured = config.endpoint.trim().replace(/\/+$/, "");
+  const endpoint = configured.replace(/\/(?:v1\/chat\/completions|api\/(?:chat|generate))$/i, "") + "/api/chat";
+  const response = await withTimeout((0, import_obsidian2.requestUrl)({
+    url: endpoint,
+    method: "POST",
+    contentType: "application/json",
+    headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {},
+    body: JSON.stringify({
+      model: config.model.trim(),
+      stream: false,
+      think: false,
+      keep_alive: "30m",
+      messages,
+      options: { temperature: 0, num_ctx: 4096, num_predict: 768 }
+    }),
+    throw: false
+  }), 9e4);
+  let json = {};
+  try {
+    json = response.json;
+  } catch {
+  }
+  if (response.status < 200 || response.status >= 300) {
+    const detail = (typeof json.error === "object" ? json.error?.message : json.error) ?? response.text;
+    throw new Error(`Ollama \u63A5\u53E3\u8FD4\u56DE HTTP ${response.status}${detail ? `\uFF1A${String(detail).slice(0, 160)}` : ""}`);
+  }
+  if (json.done_reason === "length") throw new Error("\u516C\u5F0F\u88AB\u6A21\u578B\u622A\u65AD\uFF0C\u8BF7\u7F29\u77ED\u9009\u533A\u540E\u91CD\u8BD5");
+  if (typeof json.message?.content !== "string" || !json.message.content.trim()) throw new Error("Ollama \u6CA1\u6709\u8FD4\u56DE\u53EF\u7528\u516C\u5F0F");
+  const markdown = normalizeFormulaMarkdown(json.message.content);
+  if (cache.size >= 64) cache.delete(cache.keys().next().value);
+  cache.set(cacheKey, markdown);
+  return markdown;
 }
 
 // src/zotero-matching.ts
@@ -21029,6 +21093,32 @@ var PaperNotesPlugin = class extends import_obsidian4.Plugin {
       new import_obsidian4.Notice(error2 instanceof Error ? error2.message : "\u7FFB\u8BD1\u5931\u8D25");
     }
   }
+  async convertFormulaSelection(pdf, captured) {
+    const selection = captured ?? this.readPdfSelection(pdf);
+    if (!selection) {
+      new import_obsidian4.Notice("\u8BF7\u5148\u5728 PDF \u9875\u9762\u4E2D\u5212\u9009\u9700\u8981\u8F6C\u5199\u7684\u516C\u5F0F");
+      return;
+    }
+    const request = ++this.translationRequest;
+    this.selectionTrigger?.addClass("is-loading");
+    new import_obsidian4.Notice("Ollama \u6B63\u5728\u8F6C\u5199\u516C\u5F0F\u2026");
+    try {
+      const markdown = await convertFormulaToMarkdown(selection.text, {
+        endpoint: this.settings.translationEndpoint,
+        apiKey: this.settings.translationApiKey,
+        model: this.settings.translationModel,
+        targetLanguage: this.settings.targetLanguage
+      });
+      if (this.disposed || request !== this.translationRequest || !selection.range.startContainer.isConnected) return;
+      this.selectionTrigger?.remove();
+      this.selectionTrigger = null;
+      this.showFormulaCard(selection, markdown);
+    } catch (error2) {
+      if (this.disposed || request !== this.translationRequest) return;
+      this.selectionTrigger?.removeClass("is-loading");
+      new import_obsidian4.Notice(error2 instanceof Error ? error2.message : "\u516C\u5F0F\u8F6C\u5199\u5931\u8D25");
+    }
+  }
   readPdfSelection(preferredPdf) {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
@@ -21139,6 +21229,7 @@ var PaperNotesPlugin = class extends import_obsidian4.Plugin {
       this.startFigureCapture(selection.pdf);
     });
     addAction(referenceRow, "languages", "\u7FFB\u8BD1", () => void this.translateSelection(selection.pdf, selection));
+    addAction(referenceRow, "sigma", "\u516C\u5F0F\u8F6C MD", () => void this.convertFormulaSelection(selection.pdf, selection));
     const width = toolbar.offsetWidth || 480;
     const height = toolbar.offsetHeight || 72;
     const originX = anchor?.x ?? selection.rect.left + selection.rect.width / 2;
@@ -21348,6 +21439,49 @@ var PaperNotesPlugin = class extends import_obsidian4.Plugin {
         await this.createNativeMarkup(selection, "Highlight", translation, true);
         this.dismissTranslationUi();
         new import_obsidian4.Notice("\u8BD1\u6587\u5DF2\u4FDD\u5B58\u4E3A PDF \u9AD8\u5149\u6279\u6CE8\u548C\u7B14\u8BB0\uFF0C\u91CD\u65B0\u6253\u5F00\u4ECD\u53EF\u67E5\u770B");
+      } catch (error2) {
+        this.reportError(error2);
+        save.disabled = false;
+      }
+    });
+    this.translationCard = card;
+  }
+  showFormulaCard(selection, markdown) {
+    this.translationCard?.remove();
+    const card = document.body.createDiv({ cls: "ai4d-translation-card ai4d-formula-card" });
+    card.style.left = `${Math.max(12, Math.min(window.innerWidth - 392, selection.rect.right + 10))}px`;
+    card.style.top = `${Math.max(58, Math.min(window.innerHeight - 330, selection.rect.top))}px`;
+    const header = card.createDiv({ cls: "ai4d-translation-card-header" });
+    header.createSpan({ text: `\u7B2C ${selection.page} \u9875 \xB7 Obsidian Markdown` });
+    const close = header.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "\u5173\u95ED" } });
+    (0, import_obsidian4.setIcon)(close, "x");
+    close.addEventListener("click", () => this.dismissTranslationUi());
+    card.createEl("p", { cls: "ai4d-translation-source", text: selection.text });
+    card.createEl("pre", { cls: "ai4d-formula-markdown", text: markdown });
+    const actions = card.createDiv({ cls: "ai4d-translation-actions" });
+    const copy = actions.createEl("button", { text: "\u590D\u5236 Markdown" });
+    copy.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(markdown);
+      new import_obsidian4.Notice("\u516C\u5F0F Markdown \u5DF2\u590D\u5236");
+    });
+    const save = actions.createEl("button", { cls: "mod-cta", text: "\u5199\u5165\u4F34\u968F\u7B14\u8BB0" });
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        const note = await this.companionFor(selection.pdf, true);
+        if (!note) return;
+        const id = `ai4d-formula-${crypto.randomUUID()}`;
+        const block = `
+${markdown}
+
+*[[${selection.pdf.path}#page=${selection.page}|\u2197 \u7B2C ${selection.page} \u9875]]*
+
+^${id}
+`;
+        await this.appendRecoverable(note, block, id);
+        if (this.settings.openSideBySide) await this.showCompanion(selection.pdf, note);
+        this.dismissTranslationUi();
+        new import_obsidian4.Notice("\u516C\u5F0F\u5DF2\u5199\u5165\u4F34\u968F\u7B14\u8BB0");
       } catch (error2) {
         this.reportError(error2);
         save.disabled = false;

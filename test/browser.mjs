@@ -24,7 +24,7 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/test/index.html`);
   await page.waitForFunction(()=>window.fixture?.ready);
   assert.equal(await page.locator('.ai4d-toolbar-row').count(),2);
-  assert.equal(await page.locator('.ai4d-markup-action').count(),8);
+  assert.equal(await page.locator('.ai4d-markup-action').count(),9);
   const colors=await page.locator('.ai4d-color-swatch').evaluateAll(els=>els.map(el=>getComputedStyle(el).backgroundColor));
   assert.equal(new Set(colors).size,4); assert.ok(colors.every(c=>c!=='rgba(0, 0, 0, 0)'));
   assert.equal(await page.locator('.ai4d-annotation-group').count(),2);
@@ -39,7 +39,15 @@ try {
   assert.equal(await page.locator('.ai4d-pdf-action').count(),4);
   await page.evaluate(()=>{fixture.plugin.showPdfSelectionTrigger(fixture.selection,{x:170,y:285});});
   await page.locator('.ai4d-selection-toolbar').waitFor({state:'visible'});
+  assert.equal(await page.getByRole('button',{name:'公式转 MD'}).count(),1);
   await page.screenshot({path:'test-dist/annotation-ui.png',fullPage:true,animations:'disabled'});
+  await page.evaluate(async()=>{
+    window.__requestUrl=async()=>({status:200,json:{message:{content:'\\[E=mc^2\\]'}}});
+    await fixture.plugin.convertFormulaSelection(fixture.pdf,fixture.selection);
+  });
+  assert.equal(await page.locator('.ai4d-formula-markdown').textContent(),'$$\nE=mc^2\n$$');
+  assert.equal(await page.getByRole('button',{name:'复制 Markdown'}).count(),1);
+  await page.evaluate(()=>fixture.plugin.dismissTranslationUi());
   // Late translation response must not recreate a dismissed UI.
   await page.evaluate(()=>{
     window.__requestUrl=()=>new Promise(resolve=>window.finishTranslation=resolve);
